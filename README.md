@@ -252,7 +252,7 @@ BASE_FARE=50
 PER_KM_RATE=15
 ```
 
-## 📚 API Documentation
+##  API Documentation
 
 ### Base URL
 ```
@@ -320,7 +320,7 @@ Import the Swagger/OpenAPI spec into Postman:
 http://localhost:3000/api-docs.json
 ```
 
-## 🗄 Database Schema
+##  Database Schema
 
 ### Entity Relationship Diagram
 
@@ -368,7 +368,7 @@ CREATE INDEX idx_ride_pools_status ON ride_pools(status);
 CREATE INDEX idx_pool_members_pool_ride ON pool_members(pool_id, ride_request_id);
 ```
 
-## 🚄 Performance
+##  Performance
 
 ### Benchmarks
 
@@ -631,15 +631,6 @@ docker-compose ps redis
 # Test Redis connection
 docker-compose exec redis redis-cli ping
 ```
-
-## License
-
-MIT
-
-## Support
-
-For issues or questions, please open an issue on GitHub or contact the development team.
-
 ---
 
 **Built for efficient airport transportation**
