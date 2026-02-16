@@ -1,0 +1,548 @@
+openapi: 3.0.0
+info:
+  title: Smart Airport Ride Pooling API
+  description: |
+    Backend API for smart airport ride pooling system with optimized route matching,
+    dynamic pricing, and real-time ride management.
+    
+    **Features:**
+    - Intelligent ride matching algorithm
+    - Dynamic pricing based on demand
+    - Real-time ride cancellation
+    - Pool capacity management
+    - Detour constraint enforcement
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: support@ridepooling.com
+
+servers:
+  - url: http://localhost:3000
+    description: Local development server
+  - url: https://api.ridepooling.com
+    description: Production server
+
+tags:
+  - name: Rides
+    description: Ride request management
+  - name: Pools
+    description: Ride pool management
+  - name: Pricing
+    description: Dynamic pricing calculations
+
+paths:
+  /health:
+    get:
+      summary: Health check endpoint
+      description: Check the health status of the API and its dependencies
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: healthy
+                  timestamp:
+                    type: string
+                    format: date-time
+                  database:
+                    type: string
+                    example: connected
+                  redis:
+                    type: string
+                    example: connected
+
+  /api/rides/request:
+    post:
+      tags:
+        - Rides
+      summary: Create a new ride request
+      description: |
+        Submit a new ride request. The system will automatically attempt to match
+        the request with existing pools or create a new pool.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - user_id
+                - pickup_location_id
+                - dropoff_location_id
+                - pickup_latitude
+                - pickup_longitude
+                - dropoff_latitude
+                - dropoff_longitude
+                - passenger_count
+                - luggage_count
+              properties:
+                user_id:
+                  type: string
+                  format: uuid
+                  description: UUID of the user making the request
+                pickup_location_id:
+                  type: string
+                  format: uuid
+                  description: UUID of pickup location
+                dropoff_location_id:
+                  type: string
+                  format: uuid
+                  description: UUID of dropoff location
+                pickup_latitude:
+                  type: number
+                  format: float
+                  minimum: -90
+                  maximum: 90
+                  description: Pickup latitude coordinate
+                pickup_longitude:
+                  type: number
+                  format: float
+                  minimum: -180
+                  maximum: 180
+                  description: Pickup longitude coordinate
+                dropoff_latitude:
+                  type: number
+                  format: float
+                  minimum: -90
+                  maximum: 90
+                  description: Dropoff latitude coordinate
+                dropoff_longitude:
+                  type: number
+                  format: float
+                  minimum: -180
+                  maximum: 180
+                  description: Dropoff longitude coordinate
+                passenger_count:
+                  type: integer
+                  minimum: 1
+                  maximum: 4
+                  description: Number of passengers
+                luggage_count:
+                  type: integer
+                  minimum: 0
+                  maximum: 4
+                  description: Number of luggage pieces
+                max_detour_km:
+                  type: number
+                  format: float
+                  minimum: 0
+                  maximum: 20
+                  default: 5.0
+                  description: Maximum acceptable detour in kilometers
+      responses:
+        '201':
+          description: Ride request created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      ride_request:
+                        $ref: '#/components/schemas/RideRequest'
+                      pricing:
+                        $ref: '#/components/schemas/PriceBreakdown'
+                  meta:
+                    type: object
+                    properties:
+                      response_time_ms:
+                        type: integer
+        '400':
+          description: Invalid request parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/rides/{id}:
+    get:
+      tags:
+        - Rides
+      summary: Get ride request details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Ride request details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      ride:
+                        $ref: '#/components/schemas/RideRequest'
+                      pricing:
+                        $ref: '#/components/schemas/PricingHistory'
+        '404':
+          description: Ride request not found
+
+  /api/rides/{id}/cancel:
+    post:
+      tags:
+        - Rides
+      summary: Cancel a ride request
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Ride cancelled successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/RideRequest'
+                  message:
+                    type: string
+        '400':
+          description: Cannot cancel ride (already completed or invalid state)
+
+  /api/rides/user/{userId}:
+    get:
+      tags:
+        - Rides
+      summary: Get all rides for a user
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: List of user's rides
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/RideRequest'
+                  meta:
+                    type: object
+                    properties:
+                      count:
+                        type: integer
+
+  /api/pools/{id}:
+    get:
+      tags:
+        - Pools
+      summary: Get pool details with members
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Pool details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      pool:
+                        $ref: '#/components/schemas/RidePool'
+                      members:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/PoolMember'
+
+  /api/pools:
+    get:
+      tags:
+        - Pools
+      summary: Get all active pools
+      responses:
+        '200':
+          description: List of active pools
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/RidePool'
+
+  /api/pricing/{rideRequestId}:
+    get:
+      tags:
+        - Pricing
+      summary: Get pricing for a ride request
+      parameters:
+        - name: rideRequestId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Pricing information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      ride_request_id:
+                        type: string
+                      current_pricing:
+                        $ref: '#/components/schemas/PriceBreakdown'
+                      pricing_history:
+                        $ref: '#/components/schemas/PricingHistory'
+
+  /api/pricing/calculate:
+    post:
+      tags:
+        - Pricing
+      summary: Calculate pricing before creating ride request
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - pickup_latitude
+                - pickup_longitude
+                - dropoff_latitude
+                - dropoff_longitude
+              properties:
+                pickup_latitude:
+                  type: number
+                pickup_longitude:
+                  type: number
+                dropoff_latitude:
+                  type: number
+                dropoff_longitude:
+                  type: number
+                passenger_count:
+                  type: integer
+                luggage_count:
+                  type: integer
+      responses:
+        '200':
+          description: Price calculation results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      solo_ride:
+                        $ref: '#/components/schemas/PriceBreakdown'
+                      pooled_ride:
+                        $ref: '#/components/schemas/PriceBreakdown'
+                      savings:
+                        type: number
+                      savings_percent:
+                        type: string
+
+components:
+  schemas:
+    RideRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        pickup_location_id:
+          type: string
+          format: uuid
+        dropoff_location_id:
+          type: string
+          format: uuid
+        pickup_latitude:
+          type: number
+        pickup_longitude:
+          type: number
+        dropoff_latitude:
+          type: number
+        dropoff_longitude:
+          type: number
+        passenger_count:
+          type: integer
+        luggage_count:
+          type: integer
+        max_detour_km:
+          type: number
+        status:
+          type: string
+          enum: [pending, matched, confirmed, cancelled, completed]
+        requested_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    RidePool:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        pool_code:
+          type: string
+        status:
+          type: string
+          enum: [forming, confirmed, in_progress, completed, cancelled]
+        current_passenger_count:
+          type: integer
+        current_luggage_count:
+          type: integer
+        max_passengers:
+          type: integer
+        max_luggage:
+          type: integer
+        route_distance_km:
+          type: number
+        estimated_duration_minutes:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+
+    PoolMember:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        pool_id:
+          type: string
+          format: uuid
+        ride_request_id:
+          type: string
+          format: uuid
+        pickup_sequence:
+          type: integer
+        dropoff_sequence:
+          type: integer
+        detour_distance_km:
+          type: number
+        price:
+          type: number
+        joined_at:
+          type: string
+          format: date-time
+
+    PriceBreakdown:
+      type: object
+      properties:
+        base_fare:
+          type: number
+        distance_fare:
+          type: number
+        subtotal:
+          type: number
+        surge_multiplier:
+          type: number
+        surge_amount:
+          type: number
+        pool_discount:
+          type: number
+        final_price:
+          type: number
+        demand_factor:
+          type: number
+        distance_km:
+          type: number
+
+    PricingHistory:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        ride_request_id:
+          type: string
+          format: uuid
+        base_fare:
+          type: number
+        distance_fare:
+          type: number
+        surge_multiplier:
+          type: number
+        pool_discount:
+          type: number
+        final_price:
+          type: number
+        demand_factor:
+          type: number
+        calculated_at:
+          type: string
+          format: date-time
+
+    Error:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+        details:
+          type: array
+          items:
+            type: string

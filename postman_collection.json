@@ -1,0 +1,258 @@
+{
+  "info": {
+    "name": "Airport Ride Pooling API",
+    "description": "Complete API collection for the Smart Airport Ride Pooling Backend System",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/health",
+          "host": ["{{base_url}}"],
+          "path": ["health"]
+        },
+        "description": "Check the health status of the API and its dependencies"
+      }
+    },
+    {
+      "name": "Rides",
+      "item": [
+        {
+          "name": "Create Ride Request",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": \"{{user_id}}\",\n  \"pickup_location_id\": \"{{pickup_location_id}}\",\n  \"dropoff_location_id\": \"{{dropoff_location_id}}\",\n  \"pickup_latitude\": 40.6413,\n  \"pickup_longitude\": -73.7781,\n  \"dropoff_latitude\": 40.7589,\n  \"dropoff_longitude\": -73.9851,\n  \"passenger_count\": 2,\n  \"luggage_count\": 1,\n  \"max_detour_km\": 5.0\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/rides/request",
+              "host": ["{{base_url}}"],
+              "path": ["api", "rides", "request"]
+            },
+            "description": "Create a new ride request. The system will automatically attempt to match it with existing pools."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Ride Details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/rides/{{ride_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "rides", "{{ride_id}}"]
+            },
+            "description": "Get details of a specific ride request including pricing information"
+          }
+        },
+        {
+          "name": "Cancel Ride",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/rides/{{ride_id}}/cancel",
+              "host": ["{{base_url}}"],
+              "path": ["api", "rides", "{{ride_id}}", "cancel"]
+            },
+            "description": "Cancel an existing ride request"
+          }
+        },
+        {
+          "name": "Get User Rides",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/rides/user/{{user_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "rides", "user", "{{user_id}}"]
+            },
+            "description": "Get all rides for a specific user"
+          }
+        },
+        {
+          "name": "Get Pending Rides",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/rides/pending",
+              "host": ["{{base_url}}"],
+              "path": ["api", "rides", "pending"]
+            },
+            "description": "Get all pending ride requests (admin endpoint)"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Pools",
+      "item": [
+        {
+          "name": "Get Pool Details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/pools/{{pool_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "pools", "{{pool_id}}"]
+            },
+            "description": "Get details of a specific pool including all members"
+          }
+        },
+        {
+          "name": "Get All Active Pools",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/pools",
+              "host": ["{{base_url}}"],
+              "path": ["api", "pools"]
+            },
+            "description": "Get all active pools in the system"
+          }
+        },
+        {
+          "name": "Add Member to Pool",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/pools/{{pool_id}}/members/{{ride_request_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "pools", "{{pool_id}}", "members", "{{ride_request_id}}"]
+            },
+            "description": "Manually add a ride request to a pool"
+          }
+        },
+        {
+          "name": "Remove Member from Pool",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/pools/{{pool_id}}/members/{{ride_request_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "pools", "{{pool_id}}", "members", "{{ride_request_id}}"]
+            },
+            "description": "Remove a member from a pool"
+          }
+        },
+        {
+          "name": "Update Pool Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"confirmed\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/pools/{{pool_id}}/status",
+              "host": ["{{base_url}}"],
+              "path": ["api", "pools", "{{pool_id}}", "status"]
+            },
+            "description": "Update the status of a pool (forming, confirmed, in_progress, completed, cancelled)"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Pricing",
+      "item": [
+        {
+          "name": "Get Ride Pricing",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/pricing/{{ride_request_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "pricing", "{{ride_request_id}}"]
+            },
+            "description": "Get current pricing and pricing history for a ride request"
+          }
+        },
+        {
+          "name": "Calculate Pricing (Before Request)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pickup_latitude\": 40.6413,\n  \"pickup_longitude\": -73.7781,\n  \"dropoff_latitude\": 40.7589,\n  \"dropoff_longitude\": -73.9851,\n  \"passenger_count\": 2,\n  \"luggage_count\": 1\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/pricing/calculate",
+              "host": ["{{base_url}}"],
+              "path": ["api", "pricing", "calculate"]
+            },
+            "description": "Calculate hypothetical pricing for a ride before creating the request. Shows both solo and pooled prices."
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "user_id",
+      "value": "REPLACE_WITH_ACTUAL_USER_ID",
+      "type": "string"
+    },
+    {
+      "key": "ride_id",
+      "value": "REPLACE_WITH_ACTUAL_RIDE_ID",
+      "type": "string"
+    },
+    {
+      "key": "pool_id",
+      "value": "REPLACE_WITH_ACTUAL_POOL_ID",
+      "type": "string"
+    },
+    {
+      "key": "ride_request_id",
+      "value": "REPLACE_WITH_ACTUAL_RIDE_REQUEST_ID",
+      "type": "string"
+    },
+    {
+      "key": "pickup_location_id",
+      "value": "REPLACE_WITH_ACTUAL_PICKUP_LOCATION_ID",
+      "type": "string"
+    },
+    {
+      "key": "dropoff_location_id",
+      "value": "REPLACE_WITH_ACTUAL_DROPOFF_LOCATION_ID",
+      "type": "string"
+    }
+  ]
+}
